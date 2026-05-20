@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: darkom_postgres
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: darkom_dwh
+
+    ports:
+      - "5434:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - darkom_network
+
+  pipeline:
+    build: .
+    container_name: darkom_pipeline
+
+    depends_on:
+      - postgres
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./:/app
+
+    command: python scripts/pipeline.py
+
+    networks:
+      - darkom_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+
+    ports:
+      - "5051:80"
+
+    depends_on:
+      - postgres
+
+    networks:
+      - darkom_network
+
+networks:
+  darkom_network:
+
+volumes:
+  postgres_data:
