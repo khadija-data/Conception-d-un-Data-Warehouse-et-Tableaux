@@ -1,7 +1,6 @@
 import pandas as pd
-import pandas as pd
 from datetime import datetime
-df=pd.read_csv("scripts/darkom_annonces.csv")
+
 
 def lire_donnees(chemin_fichier):
     return pd.read_csv(chemin_fichier, encoding="utf-8")
@@ -33,14 +32,20 @@ def convertir_types(df):
 
     return df
 
-df = convertir_types(df)
 
+def remplir_par_mode(df, colonne, valeur_defaut="inconnu"):
+    mode = df[colonne].mode(dropna=True)
+
+    if not mode.empty:
+        return df[colonne].fillna(mode.iloc[0])
+
+    return df[colonne].fillna(valeur_defaut)
 
 
 def gerer_valeurs_manquantes(df):
-    df["quartier"] = df["quartier"].fillna("Inconnu")
-    df["type_bien"] = df["type_bien"].fillna("inconnu")
-    df["transaction"] = df["transaction"].fillna("inconnu")
+    df["quartier"] = remplir_par_mode(df, "quartier")
+    df["type_bien"] = remplir_par_mode(df, "type_bien")
+    df["transaction"] = remplir_par_mode(df, "transaction")
 
     df["date_publication"] = df["date_publication"].fillna(pd.Timestamp("1900-01-01"))
 
@@ -67,7 +72,7 @@ def standardiser_donnees(df):
     df["ville"] = df["ville"].replace({
         "casa": "casablanca",
         "dar el beida": "casablanca",
-        "salé": "sale",
+        "salÃ©": "sale",
         "marrakesh": "marrakech",
     })
 
@@ -79,10 +84,10 @@ def standardiser_donnees(df):
 
     df["transaction"] = df["transaction"].replace({
         "a vendre": "vente",
-        "à vendre": "vente",
+        "Ã  vendre": "vente",
         "sell": "vente",
         "a louer": "location",
-        "à louer": "location",
+        "Ã  louer": "location",
         "rent": "location",
     })
 
@@ -100,7 +105,7 @@ def traiter_valeurs_aberrantes(df):
 def creer_features(df):
     df = df.copy()
 
-    # Prix par m²
+    # Prix par mÂ²
     df["prix_m2"] = df["prix"] / df["surface"]
 
     # Age du bien
@@ -110,7 +115,7 @@ def creer_features(df):
         annee_actuelle - df["annee_construction"]
     )
 
-    # Catégorie prix
+    # CatÃ©gorie prix
     def categorie_prix(prix):
 
         if prix < 500000:
@@ -129,7 +134,7 @@ def creer_features(df):
         df["prix"].apply(categorie_prix)
     )
 
-    # Catégorie surface
+    # CatÃ©gorie surface
     def categorie_surface(surface):
 
         if surface < 80:
@@ -176,9 +181,13 @@ def nettoyer_donnees(chemin_entree, chemin_sortie):
     sauvegarder_donnees(df, chemin_sortie)
 
 
+import os
+
 def main():
-    chemin_entree = "staging/darkom_annonces.csv"
-    chemin_sortie = "clean/annonces_clean_simple.csv"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    chemin_entree = os.path.join(BASE_DIR, "staging", "darkom_annonces.csv")
+    chemin_sortie = os.path.join(BASE_DIR, "clean", "annonces_clean_simple.csv")
 
     nettoyer_donnees(chemin_entree, chemin_sortie)
 

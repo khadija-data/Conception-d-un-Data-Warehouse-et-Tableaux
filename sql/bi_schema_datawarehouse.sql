@@ -1,6 +1,12 @@
 CREATE SCHEMA IF NOT EXISTS bi_schema;
 
-CREATE TABLE IF NOT EXISTS bi_schema.dim_date (
+DROP TABLE IF EXISTS bi_schema.fact_annonces CASCADE;
+DROP TABLE IF EXISTS bi_schema.dim_date CASCADE;
+DROP TABLE IF EXISTS bi_schema.dim_location CASCADE;
+DROP TABLE IF EXISTS bi_schema.dim_ville CASCADE;
+DROP TABLE IF EXISTS bi_schema.dim_bien CASCADE;
+
+CREATE TABLE bi_schema.dim_date (
     date_id SERIAL PRIMARY KEY,
     date_publication DATE,
     jour INT,
@@ -8,12 +14,13 @@ CREATE TABLE IF NOT EXISTS bi_schema.dim_date (
     annee INT
 );
 
-CREATE TABLE IF NOT EXISTS bi_schema.dim_ville (
-    ville_id SERIAL PRIMARY KEY,
-    ville TEXT
+CREATE TABLE bi_schema.dim_location (
+    location_id SERIAL PRIMARY KEY,
+    ville TEXT,
+    quartier TEXT
 );
 
-CREATE TABLE IF NOT EXISTS bi_schema.dim_bien (
+CREATE TABLE bi_schema.dim_bien (
     bien_id SERIAL PRIMARY KEY,
     type_bien TEXT,
     transaction TEXT,
@@ -23,30 +30,26 @@ CREATE TABLE IF NOT EXISTS bi_schema.dim_bien (
     annee_construction INT
 );
 
-CREATE TABLE IF NOT EXISTS bi_schema.fact_annonces (
+CREATE TABLE bi_schema.fact_annonces (
     fact_id SERIAL PRIMARY KEY,
     date_id INT REFERENCES bi_schema.dim_date(date_id),
-    ville_id INT REFERENCES bi_schema.dim_ville(ville_id),
+    location_id INT REFERENCES bi_schema.dim_location(location_id),
     bien_id INT REFERENCES bi_schema.dim_bien(bien_id),
     prix NUMERIC,
     surface NUMERIC,
+    categorie_prix TEXT,
     nb_annonces INT DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_fact_date ON bi_schema.fact_annonces(date_id);
-CREATE INDEX IF NOT EXISTS idx_fact_ville ON bi_schema.fact_annonces(ville_id);
+CREATE INDEX IF NOT EXISTS idx_fact_location ON bi_schema.fact_annonces(location_id);
 CREATE INDEX IF NOT EXISTS idx_fact_bien ON bi_schema.fact_annonces(bien_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uniq_ville ON bi_schema.dim_ville(ville);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_location ON bi_schema.dim_location(ville, quartier);
 
-TRUNCATE TABLE
-    bi_schema.fact_annonces,
-    bi_schema.dim_date,
-    bi_schema.dim_ville,
-    bi_schema.dim_bien
-RESTART IDENTITY CASCADE;
-
-INSERT INTO bi_schema.dim_ville (ville)
-SELECT DISTINCT ville
+INSERT INTO bi_schema.dim_location (ville, quartier)
+SELECT DISTINCT
+    ville,
+    quartier
 FROM clean.annonces_clean
 WHERE ville IS NOT NULL;
 
@@ -73,24 +76,27 @@ FROM clean.annonces_clean;
 
 INSERT INTO bi_schema.fact_annonces (
     date_id,
-    ville_id,
+    location_id,
     bien_id,
     prix,
     surface,
+    categorie_prix,
     nb_annonces
 )
 SELECT
     d.date_id,
-    v.ville_id,
+    l.location_id,
     b.bien_id,
     c.prix,
     c.surface,
+    c.categorie_prix,
     1
 FROM clean.annonces_clean c
 JOIN bi_schema.dim_date d
     ON c.date_publication = d.date_publication
-JOIN bi_schema.dim_ville v
-    ON c.ville = v.ville
+JOIN bi_schema.dim_location l
+    ON c.ville = l.ville
+    AND c.quartier = l.quartier
 JOIN bi_schema.dim_bien b
     ON c.type_bien = b.type_bien
     AND c.transaction = b.transaction
