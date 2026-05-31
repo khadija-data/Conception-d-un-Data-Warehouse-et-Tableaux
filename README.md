@@ -53,7 +53,7 @@ fact_annonces
 Se placer dans le dossier du projet :
 
 ```powershell
-cd C:\Users\pc\Downloads\Conception-d-un-Data-Warehouse-et-Tableaux-main\Conception-d-un-Data-Warehouse-et-Tableaux-main
+cd C:\Users\pc\Downloads\Conception-d-un-Data-Warehouse-et-Tableaux
 ```
 
 Puis lancer :
